@@ -111,7 +111,7 @@ router.post('/cash/:code/pay', asyncHandler(async (req, res) => {
 
 router.get('/sales', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT c.*,COALESCE((SELECT json_agg(a.asiento ORDER BY a.asiento) FROM asientos_ventas a WHERE a.compra_id=c.id),c.asientos_vendidos,'[]'::jsonb) AS asientos
+    `SELECT c.*,COALESCE((SELECT jsonb_agg(a.asiento ORDER BY a.asiento) FROM asientos_ventas a WHERE a.compra_id=c.id),c.asientos_vendidos,'[]'::jsonb) AS asientos
      FROM compras_entradas_cine c WHERE c.id_empleado=$1 ORDER BY c.fecha_registro DESC,c.id DESC`,
     [req.user.id]
   );
@@ -150,7 +150,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
 
 async function ticketByCode(code) {
   const result = await query(
-    `SELECT c.*,COALESCE((SELECT json_agg(a.asiento ORDER BY a.asiento) FROM asientos_ventas a WHERE a.compra_id=c.id),c.asientos_vendidos,'[]'::jsonb) AS asientos
+    `SELECT c.*,COALESCE((SELECT jsonb_agg(a.asiento ORDER BY a.asiento) FROM asientos_ventas a WHERE a.compra_id=c.id),c.asientos_vendidos,'[]'::jsonb) AS asientos
      FROM compras_entradas_cine c WHERE c.codigo_seguimiento=$1`,
     [code]
   );
