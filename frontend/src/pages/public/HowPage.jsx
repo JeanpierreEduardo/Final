@@ -1,0 +1,4 @@
+export default function HowPage() {
+  const steps = [['01', 'Elige tu película', 'Revisa la cartelera y selecciona la historia que quieres disfrutar.'], ['02', 'Selecciona tu función', 'Escoge el horario que más te convenga y la cantidad de entradas.'], ['03', 'Confirma tu reserva', 'Inicia sesión, registra tus datos y recibe un código de seguimiento.'], ['04', 'Disfruta la función', 'Presenta tu código en taquilla para validar el ingreso.']];
+  return <main className="seccion page-section"><div className="contenedor"><p className="eyebrow">Una experiencia sencilla</p><h1>¿Cómo funciona?</h1><p className="subtitulo">Reservar tu entrada en CineMax es rápido, claro y seguro.</p><div className="pasos">{steps.map(([number, title, text]) => <article className="paso" key={number}><span className="paso-numero">{number}</span><h2>{title}</h2><p>{text}</p></article>)}</div></div></main>;
+}

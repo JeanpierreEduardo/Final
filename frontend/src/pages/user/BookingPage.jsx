@@ -1,0 +1,13 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { api } from '../../api.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import Notice from '../../components/Notice.jsx';
+
+export default function BookingPage() {
+  const { user } = useAuth(); const [params] = useSearchParams(); const [movies, setMovies] = useState([]); const [form, setForm] = useState({ pelicula: params.get('pelicula') || '', horario: 'tarde', cantidad: 1, comentario: '' }); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { api('/movies').then((data) => setMovies(data.movies.filter((movie) => movie.estado === 'cartelera'))).catch((e) => setError(e.message)); }, []);
+  const change = (e) => setForm((old) => ({ ...old, [e.target.name]: e.target.value }));
+  async function submit(e) { e.preventDefault(); setError(''); setMessage(''); setBusy(true); try { const data = await api('/purchases', { method: 'POST', body: JSON.stringify({ ...form, cantidad: Number(form.cantidad) }) }); setMessage(data.message); } catch (err) { setError(err.message); } finally { setBusy(false); } }
+  return <main className="seccion page-section"><div className="contenedor narrow"><p className="eyebrow">Reserva en línea</p><h1>Crear preorden</h1><p className="subtitulo">Tu código CIN se cobrará en caja. La boleta se generará cuando el trabajador valide tu DNI y reciba el pago.</p><form className="formulario-reserva card-form" onSubmit={submit}><label className="campo">DNI registrado<input value={user?.dni || 'Sin DNI registrado'} readOnly /></label><label className="campo">Película<select name="pelicula" value={form.pelicula} onChange={change} required><option value="">Selecciona una película</option>{movies.map((movie) => <option key={movie.id} value={movie.clave}>{movie.titulo} · {movie.sala}</option>)}</select></label><label className="campo">Horario<select name="horario" value={form.horario} onChange={change}><option value="tarde">Tarde</option><option value="noche">Noche</option></select></label><label className="campo">Cantidad de entradas<input type="number" name="cantidad" min="1" max="8" value={form.cantidad} onChange={change} required /></label><label className="campo campo-ancho">Comentario<textarea name="comentario" maxLength="500" value={form.comentario} onChange={change} placeholder="Ej. asientos juntos o requerimientos de acceso" /></label><Notice error={!!error}>{error}</Notice><Notice>{message}</Notice><button className="boton boton-primario" disabled={busy}>{busy ? 'Guardando…' : 'Generar código CIN'}</button></form></div></main>;
+}
