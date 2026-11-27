@@ -99,6 +99,37 @@ router.put('/workers/:id', asyncHandler(async (req, res) => {
   if (data.contrasena || !data.activo) await query('DELETE FROM sesiones_cinemax WHERE id_usuario=$1', [id]);
   res.json({ worker: result.rows[0] });
 }));
+router.delete('/workers/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de trabajador inválido.' });
+  }
+  if (Number(req.user.id) === id) {
+    return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta.' });
+  }
+
+  // Baja lógica: conserva los registros relacionados, pero desactiva al trabajador.
+  const result = await query(
+    `UPDATE usuarios
+     SET activo = FALSE
+     WHERE id = $1 AND rol = 'empleado' AND activo = TRUE
+     RETURNING id`,
+    [id]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Trabajador no encontrado o ya inactivo.' });
+  }
+
+  // Elimina sus sesiones para que la desactivación tenga efecto inmediato.
+  await query(
+    'DELETE FROM sesiones_cinemax WHERE id_usuario = $1',
+    [id]
+  );
+
+  return res.status(204).end();
+}));
+
 
 function validateWorker(body, creating) {
   const nombre = String(body.nombre || '').trim().replace(/\s+/g, ' ');
