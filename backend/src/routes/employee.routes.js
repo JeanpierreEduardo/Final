@@ -82,10 +82,15 @@ router.post('/cash/:code/pay', asyncHandler(async (req, res) => {
   const formaPago = String(req.body?.forma_pago || '').toLowerCase();
   const tipoComprobante = String(req.body?.tipo_comprobante || 'boleta').toLowerCase();
   const numeroTarjeta = String(req.body?.numero_tarjeta || '').replace(/\D/g, '');
+  const tarjetaVencimiento = String(req.body?.tarjeta_vencimiento || '').trim();
+  const cvv = String(req.body?.cvv || '').trim();
+  const yapeCelular = String(req.body?.yape_celular || '').replace(/\D/g, '');
+  const yapeCodigo = String(req.body?.yape_codigo_verificacion || '').trim();
   const ruc = String(req.body?.ruc || '').trim();
   const razonSocial = String(req.body?.razon_social || '').trim();
   if (!/^\d{8}$/.test(dni) || !['efectivo', 'yape', 'tarjeta'].includes(formaPago) || !['boleta', 'factura'].includes(tipoComprobante)) return res.status(400).json({ error: 'DNI, comprobante o método de pago inválido.' });
-  if (formaPago === 'tarjeta' && !luhn(numeroTarjeta)) return res.status(400).json({ error: 'La tarjeta no supera la validación de número.' });
+  if (formaPago === 'yape' && (!/^\d{9}$/.test(yapeCelular) || !/^\d{4,8}$/.test(yapeCodigo))) return res.status(400).json({ error: 'Para Yape ingresa un celular de 9 dígitos y un código de verificación de 4 a 8 dígitos.' });
+  if (formaPago === 'tarjeta' && (!luhn(numeroTarjeta) || !/^\d{3,4}$/.test(cvv) || !validCardExpiry(tarjetaVencimiento))) return res.status(400).json({ error: 'La tarjeta debe tener número válido, fecha de vencimiento vigente y CVV de 3 o 4 dígitos.' });
   if (tipoComprobante === 'factura' && (!/^\d{11}$/.test(ruc) || razonSocial.length < 3)) return res.status(400).json({ error: 'Para factura se necesita RUC válido y razón social.' });
   const sol = await activeSol();
   if (!sol) return res.status(403).json({ error: 'No hay una clave SOL activa. No se puede cobrar ni emitir la boleta.', code: 'SOL_INACTIVA' });
@@ -99,9 +104,9 @@ router.post('/cash/:code/pay', asyncHandler(async (req, res) => {
     const sequence = await db.query("SELECT nextval('comprobante_seq') AS ultimo");
     const number = `${tipoComprobante === 'boleta' ? 'B001' : 'F001'}-${String(sequence.rows[0].ultimo).padStart(8, '0')}`;
     const updated = await db.query(
-      `UPDATE compras_entradas_cine SET estado='registrado',estado_pago='pagado',fecha_pago=NOW(),id_empleado=$1,id_emisor=$1,id_clave_sol=$2,forma_pago=$3,tipo_comprobante=$4,doc_cliente=$5,ruc_cliente=$6,razon_social=$7,tarjeta_ultimos4=$8,numero_comprobante=$9,monto=total_venta,fecha=NOW()
-       WHERE id=$10 AND estado_pago='pendiente' RETURNING *`,
-      [req.user.id, sol.id, formaPago, tipoComprobante, dni, tipoComprobante === 'factura' ? ruc : null, tipoComprobante === 'factura' ? razonSocial : null, formaPago === 'tarjeta' ? numeroTarjeta.slice(-4) : null, number, found.id]
+      `UPDATE compras_entradas_cine SET estado='registrado',estado_pago='pagado',fecha_pago=NOW(),id_empleado=$1,id_emisor=$1,id_clave_sol=$2,forma_pago=$3,tipo_comprobante=$4,doc_cliente=$5,ruc_cliente=$6,razon_social=$7,tarjeta_ultimos4=$8,tarjeta_vencimiento=$9,yape_celular=$10,numero_comprobante=$11,monto=total_venta,fecha=NOW()
+       WHERE id=$12 AND estado_pago='pendiente' RETURNING *`,
+      [req.user.id, sol.id, formaPago, tipoComprobante, dni, tipoComprobante === 'factura' ? ruc : null, tipoComprobante === 'factura' ? razonSocial : null, formaPago === 'tarjeta' ? numeroTarjeta.slice(-4) : null, formaPago === 'tarjeta' ? tarjetaVencimiento : null, formaPago === 'yape' ? yapeCelular : null, number, found.id]
     );
     if (!updated.rows[0]) throw Object.assign(new Error('La preorden ya fue cobrada por otro usuario.'), { status: 409 });
     await db.query('COMMIT');
@@ -128,7 +133,7 @@ router.post('/tickets/:code/validate', asyncHandler(async (req, res) => {
   const code = String(req.params.code).trim().toUpperCase();
   const result = await query(
     `UPDATE compras_entradas_cine SET estado='atendido',id_validador=$1,fecha_validacion=NOW()
-     WHERE codigo_seguimiento=$2 AND estado='registrado' AND (fecha_funcion IS NULL OR fecha_funcion=(NOW() AT TIME ZONE 'America/Lima')::date)
+     WHERE codigo_seguimiento=$2 AND estado='registrado' AND estado_pago='pagado' AND (fecha_funcion IS NULL OR fecha_funcion=(NOW() AT TIME ZONE 'America/Lima')::date)
      RETURNING *`,
     [req.user.id, code]
   );
@@ -170,6 +175,14 @@ function luhn(number) {
     sum += digit; doubleIt = !doubleIt;
   }
   return sum % 10 === 0;
+}
+
+function validCardExpiry(value) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+  const [year, month] = value.split('-').map(Number);
+  const now = new Date();
+  const current = now.getFullYear() * 12 + now.getMonth();
+  return year * 12 + (month - 1) >= current;
 }
 
 export default router;

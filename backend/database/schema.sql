@@ -121,6 +121,8 @@ ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS numero_comprobante VA
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS ruc_cliente VARCHAR(11);
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS razon_social VARCHAR(180);
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS tarjeta_ultimos4 CHAR(4);
+ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS yape_celular VARCHAR(9);
+ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS tarjeta_vencimiento VARCHAR(7);
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS id_clave_sol BIGINT;
 
 UPDATE compras_entradas_cine SET id_usuario=usuario_id WHERE id_usuario IS NULL AND usuario_id IS NOT NULL;

@@ -23,11 +23,17 @@ import EmployeeProfilePage from './pages/employee/EmployeeProfilePage.jsx';
 import SunatRequestsPage from './pages/sunat/SunatRequestsPage.jsx';
 import SunatFiscalizationPage from './pages/sunat/SunatFiscalizationPage.jsx';
 import SunatReceiptsPage from './pages/sunat/SunatReceiptsPage.jsx';
+import { useAuth } from './contexts/AuthContext.jsx';
 
 function PublicLayout() { return <PageShell><Outlet /></PageShell>; }
 function AdminLayout() { return <PageShell area="admin"><Outlet /></PageShell>; }
 function EmployeeLayout() { return <PageShell area="employee"><Outlet /></PageShell>; }
 function SunatLayout() { return <PageShell area="sunat"><Outlet /></PageShell>; }
+function RoleAreaLayout() {
+  const { user } = useAuth();
+  const area = user?.rol === 'administrador' ? 'admin' : user?.rol === 'empleado' ? 'employee' : 'public';
+  return <PageShell area={area}><Outlet /></PageShell>;
+}
 function RoleHome() { return <Navigate to="/" replace />; }
 
 export default function App() {
@@ -61,7 +67,7 @@ export default function App() {
       </Route>
     </Route>
     <Route element={<ProtectedRoute roles={['administrador', 'empleado']} />}>
-      <Route element={<EmployeeLayout />}>
+      <Route element={<RoleAreaLayout />}>
         <Route path="/empleado/ventas" element={<EmployeeSellPage />} />
         <Route path="/empleado/caja" element={<EmployeeCashPage />} />
         <Route path="/empleado/validar" element={<EmployeeValidatePage />} />
@@ -71,7 +77,7 @@ export default function App() {
       </Route>
     </Route>
     <Route element={<ProtectedRoute roles={['usuario', 'administrador', 'empleado']} />}>
-      <Route element={<SunatLayout />}>
+      <Route element={<RoleAreaLayout />}>
         <Route path="/sunat/clave-sol" element={<SunatRequestsPage />} />
         <Route path="/sunat/comprobantes" element={<SunatReceiptsPage />} />
         <Route path="/sunat/fiscalizacion" element={<SunatFiscalizationPage />} />

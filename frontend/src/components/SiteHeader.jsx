@@ -7,7 +7,7 @@ export default function SiteHeader({ area = 'public' }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const links = area === 'admin'
-    ? [['Clientes', '/admin/clientes'], ['Películas', '/admin/peliculas'], ['Trabajadores', '/admin/trabajadores'], ['Compras', '/admin/compras'], ['Caja', '/empleado/caja'], ['Clave SOL', '/sunat/clave-sol']]
+    ? [['Inicio', '/admin'], ['Clientes', '/admin/clientes'], ['Películas', '/admin/peliculas'], ['Trabajadores', '/admin/trabajadores'], ['Compras', '/admin/compras'], ['Preorden CIN', '/empleado/ventas'], ['Caja', '/empleado/caja'], ['Validar entradas', '/empleado/validar'], ['Clave SOL', '/sunat/clave-sol']]
     : area === 'employee'
       ? [['Preorden CIN', '/empleado/ventas'], ['Caja', '/empleado/caja'], ['Validar entradas', '/empleado/validar'], ['Cartelera y asientos', '/empleado/cartelera'], ['Mis ventas', '/empleado/mis-ventas'], ['Mi perfil', '/empleado/perfil']]
       : area === 'sunat'
