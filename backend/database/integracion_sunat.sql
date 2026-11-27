@@ -48,8 +48,9 @@ CREATE TABLE IF NOT EXISTS auditoria (
   fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS comprobante_seq (id INTEGER PRIMARY KEY DEFAULT 1, ultimo INTEGER NOT NULL DEFAULT 0);
-INSERT INTO comprobante_seq(id, ultimo) VALUES (1,0) ON CONFLICT (id) DO NOTHING;
+/* Neon puede traer esta secuencia desde la integración anterior. Se usa
+   como secuencia PostgreSQL, no como tabla, para evitar conflictos. */
+CREATE SEQUENCE IF NOT EXISTS comprobante_seq;
 
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS tipo_comprobante VARCHAR(20) NOT NULL DEFAULT 'ninguno';
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS doc_cliente VARCHAR(20);

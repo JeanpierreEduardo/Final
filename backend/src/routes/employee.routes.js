@@ -96,7 +96,7 @@ router.post('/cash/:code/pay', asyncHandler(async (req, res) => {
   const db = await pool.connect();
   try {
     await db.query('BEGIN');
-    const sequence = await db.query('UPDATE comprobante_seq SET ultimo=ultimo+1 WHERE id=1 RETURNING ultimo');
+    const sequence = await db.query("SELECT nextval('comprobante_seq') AS ultimo");
     const number = `${tipoComprobante === 'boleta' ? 'B001' : 'F001'}-${String(sequence.rows[0].ultimo).padStart(8, '0')}`;
     const updated = await db.query(
       `UPDATE compras_entradas_cine SET estado='registrado',estado_pago='pagado',fecha_pago=NOW(),id_empleado=$1,id_emisor=$1,id_clave_sol=$2,forma_pago=$3,tipo_comprobante=$4,doc_cliente=$5,ruc_cliente=$6,razon_social=$7,tarjeta_ultimos4=$8,numero_comprobante=$9,monto=total_venta,fecha=NOW()
