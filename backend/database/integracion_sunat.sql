@@ -62,30 +62,10 @@ ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS fecha TIMESTAMPTZ;
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS asientos JSONB;
 
 /* Compatibilidad con la BD anterior: algunas instalaciones crearon
-   compras_entradas_cine.asientos como TEXT. Se convierte de forma segura
-   para que el trigger pueda trabajar con JSONB. */
-CREATE OR REPLACE FUNCTION cinemax_texto_a_jsonb(valor TEXT) RETURNS JSONB
-LANGUAGE plpgsql IMMUTABLE AS $$
-BEGIN
-  IF valor IS NULL OR btrim(valor) = '' THEN RETURN '[]'::JSONB; END IF;
-  RETURN valor::JSONB;
-EXCEPTION WHEN others THEN
-  RETURN '[]'::JSONB;
-END;
-$$;
-
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='compras_entradas_cine'
-      AND column_name='asientos' AND data_type='text'
-  ) THEN
-    ALTER TABLE compras_entradas_cine
-      ALTER COLUMN asientos TYPE JSONB
-      USING cinemax_texto_a_jsonb(asientos);
-  END IF;
-END $$;
+   compras_entradas_cine.asientos como TEXT. Esa columna antigua no se usa
+   para la operación del CineMax; los asientos actuales viven en
+   asientos_vendidos, que siempre es JSONB. No se escribe sobre asientos
+   para evitar incompatibilidades entre instalaciones. */
 
 DO $$
 BEGIN
@@ -97,7 +77,6 @@ END $$;
 UPDATE usuarios SET password_hash = contrasena_hash WHERE password_hash IS NULL AND contrasena_hash IS NOT NULL;
 UPDATE compras_entradas_cine SET monto = total_venta WHERE monto IS NULL;
 UPDATE compras_entradas_cine SET fecha = fecha_registro WHERE fecha IS NULL;
-UPDATE compras_entradas_cine SET asientos = asientos_vendidos WHERE asientos IS NULL;
 
 CREATE OR REPLACE FUNCTION sincronizar_comprobante_cinemax() RETURNS trigger AS $$
 BEGIN
@@ -105,8 +84,7 @@ BEGIN
   NEW.total_venta := COALESCE(NEW.total_venta, NEW.monto);
   NEW.fecha := COALESCE(NEW.fecha, NEW.fecha_registro, NOW());
   NEW.fecha_registro := COALESCE(NEW.fecha_registro, NEW.fecha, NOW());
-  NEW.asientos := COALESCE(NEW.asientos, NEW.asientos_vendidos, '[]'::jsonb);
-  NEW.asientos_vendidos := COALESCE(NEW.asientos_vendidos, NEW.asientos, '[]'::jsonb);
+  NEW.asientos_vendidos := COALESCE(NEW.asientos_vendidos, '[]'::jsonb);
   RETURN NEW;
 END; $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_sincronizar_comprobante_cinemax ON compras_entradas_cine;
