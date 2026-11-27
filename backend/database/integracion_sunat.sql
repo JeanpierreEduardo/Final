@@ -61,6 +61,32 @@ ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS monto NUMERIC(12,2);
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS fecha TIMESTAMPTZ;
 ALTER TABLE compras_entradas_cine ADD COLUMN IF NOT EXISTS asientos JSONB;
 
+/* Compatibilidad con la BD anterior: algunas instalaciones crearon
+   compras_entradas_cine.asientos como TEXT. Se convierte de forma segura
+   para que el trigger pueda trabajar con JSONB. */
+CREATE OR REPLACE FUNCTION cinemax_texto_a_jsonb(valor TEXT) RETURNS JSONB
+LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  IF valor IS NULL OR btrim(valor) = '' THEN RETURN '[]'::JSONB; END IF;
+  RETURN valor::JSONB;
+EXCEPTION WHEN others THEN
+  RETURN '[]'::JSONB;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='compras_entradas_cine'
+      AND column_name='asientos' AND data_type='text'
+  ) THEN
+    ALTER TABLE compras_entradas_cine
+      ALTER COLUMN asientos TYPE JSONB
+      USING cinemax_texto_a_jsonb(asientos);
+  END IF;
+END $$;
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='compras_clave_sol_fk' AND conrelid='public.compras_entradas_cine'::regclass) THEN
