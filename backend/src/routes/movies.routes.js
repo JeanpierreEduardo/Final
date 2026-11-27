@@ -16,6 +16,31 @@ router.get('/all', authRequired, requireRole('administrador'), asyncHandler(asyn
   res.json({ movies: result.rows.map(withPosterUrl) });
 }));
 
+router.get('/:id', asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(404).json({
+      error: 'Película no encontrada.'
+    });
+  }
+
+  const result = await query(
+    'SELECT * FROM peliculas WHERE id = $1 LIMIT 1',
+    [id]
+  );
+
+  if (!result.rows[0]) {
+    return res.status(404).json({
+      error: 'Película no encontrada.'
+    });
+  }
+
+  res.json({
+    movie: withPosterUrl(result.rows[0])
+  });
+}));
+
 router.use(authRequired, requireRole('administrador'));
 
 router.post('/', asyncHandler(async (req, res) => {
